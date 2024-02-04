@@ -1,0 +1,30 @@
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rewire-sqlmodel"
+version = "0.0.1"
+description = "Integration of rewire and sqlmodel"
+readme = "README.md"
+authors = [{ name = "Ivan Vozhakov", email = "gou177@bk.ru" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = []
+dependencies = [
+    "sqlmodel >= 0.0.14",
+    "rewire"
+]
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = ["aiosqlite", "alembic", "fastapi", "sqlalchemy_utils"]
+migrations = ["alembic"]
+fastapi = ["fastapi"]
+
+[project.urls]
+Homepage = "https://github.com/rewirepy/rewire-sqlmodel"
