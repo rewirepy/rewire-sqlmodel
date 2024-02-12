@@ -95,11 +95,9 @@ async def run():
         ).init().add().use():
             ConfigModule.get().patch(
                 {
-                    "plugins": {
-                        "sql": {
-                            "alembic": {"generate": True},
-                            "url": f"sqlite+aiosqlite:///{dir}/db.sqlite",
-                        }
+                    "rewire_sqlmodel": {
+                        "alembic": {"generate": True},
+                        "url": f"sqlite+aiosqlite:///{dir}/db.sqlite",
                     }
                 }
             )
