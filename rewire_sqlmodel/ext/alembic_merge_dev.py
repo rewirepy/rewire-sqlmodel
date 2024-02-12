@@ -86,7 +86,12 @@ def cleanup(rev: detect_rev.Result):
 async def run():
     with TemporaryDirectory() as dir:
         async with Space(
-            only=[LifecycleModule, LoggerModule, LoaderModule, ConfigModule]
+            only=[
+                LifecycleModule,
+                LoaderModule,
+                ConfigModule,
+                LoggerModule,
+            ]
         ).init().add().use():
             ConfigModule.get().patch(
                 {
