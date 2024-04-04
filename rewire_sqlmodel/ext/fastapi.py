@@ -14,7 +14,7 @@ with suppress(ImportError):
     class Config(ConfigDependency):
         transaction_tries: int = 3
 
-    @plugin.setup(priority=1000)
+    @plugin.setup(priority=1000, stage=100)
     def monkey_patch_fastapi(app: FastAPI, config: Config.Value):
         for route in app.routes:
             if not isinstance(route, APIRoute):

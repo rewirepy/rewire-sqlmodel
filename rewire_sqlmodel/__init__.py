@@ -152,7 +152,7 @@ if PluginConfig.patch_types:
 
         def load_dialect_impl(self, dialect):
             if id(dialect) not in dialect_patched:
-                dialect._json_serializer = BaseModel.__pydantic_serializer__.to_json  # type: ignore
+                dialect._json_serializer = self.type_adapter.dump_json  # type: ignore
                 dialect_patched.add(id(dialect))
             return super().load_dialect_impl(dialect)
 
