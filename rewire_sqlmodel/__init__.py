@@ -224,15 +224,73 @@ tx_lock = anyio.Lock()
 session_context = Context[AsyncSession]()
 
 
+class ContextSession:
+    session: AsyncSession | None = None
+    commit_hooks: list[Callable[[], Awaitable]]
+    rollback_hooks: list[Callable[[], Awaitable]]
+
+    async def __aenter__(self):
+        if self.session is not None:
+            self.context = session_context.use(self.session)
+            self.context.__enter__()
+            return self
+        lazy = LazySession.ctx.get(None)
+        if lazy is not None:
+            self.context = None
+            session = await lazy.start()
+            return session
+        await self.start()
+        assert self.session is not None
+        self.context = session_context.use(self.session)
+        self.context.__enter__()
+        return self
+
+    async def start(self):
+        self.session = Dependencies.ctx.get().resolve(AsyncSessionmaker)()
+        self.commit_hooks = []
+        self.rollback_hooks = []
+
+    async def __aexit__(self, exc_type, exc_value, trace):
+        if not self.context:
+            return
+        self.context.__exit__(exc_type, exc_value, trace)
+        if self.session is None:
+            return
+
+        if not exc_type:
+            try:
+                await self.session.commit()
+            finally:
+                await self.session.__aexit__(exc_type, exc_value, trace)
+            for hook in self.commit_hooks:
+                await hook()
+        else:
+            try:
+                await self.session.rollback()
+            finally:
+                await self.session.__aexit__(exc_type, exc_value, trace)
+            for hook in self.rollback_hooks:
+                await hook()
+
+    async def commit(self):
+        assert self.session is not None
+        await self.session.commit()
+
+    async def rollback(self):
+        assert self.session is not None
+        await self.session.rollback()
+
+
 class LazySession:
     ctx = CTX()
-    session: AsyncSession | None = None
+    session: ContextSession | None = None
 
     async def start(self):
         if self.session:
             return self.session
         logger.trace("lazy session started")
-        self.session = DependenciesModule.get().resolve(AsyncSessionmaker)()
+        self.session = ContextSession()
+        await self.session.start()
         await self.session.__aenter__()
         return self.session
 
@@ -250,41 +308,6 @@ class LazySession:
         self.context.__exit__(exc_type, exc_value, trace)
         if not self.session:
             return
-        if not exc_type:
-            await self.session.commit()
-        else:
-            await self.session.rollback()
-
-        await self.session.__aexit__(exc_type, exc_value, trace)
-
-
-class ContextSession:
-    session: AsyncSession | None = None
-
-    async def __aenter__(self):
-        lazy = LazySession.ctx.get(None)
-        if lazy is not None:
-            self.context = None
-            session = await lazy.start()
-            self.context = session_context.use(session)
-            self.context.__enter__()
-            return
-        self.session = Dependencies.ctx.get().resolve(AsyncSessionmaker)()
-        self.context = session_context.use(self.session)
-        self.context.__enter__()
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, trace):
-        if not self.context:
-            return
-        self.context.__exit__(exc_type, exc_value, trace)
-        if self.session is None:
-            return
-        if not exc_type:
-            await self.session.commit()
-        else:
-            await self.session.rollback()
-
         await self.session.__aexit__(exc_type, exc_value, trace)
 
 
