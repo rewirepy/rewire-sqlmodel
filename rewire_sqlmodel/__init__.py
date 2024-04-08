@@ -230,6 +230,7 @@ class ContextSession:
 
     async def __aenter__(self):
         if (root := self.ctx.get(None)) is not None:
+            self.context = None
             return root
         if self.session is not None:
             self.context = session_context.use(self.session)
