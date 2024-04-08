@@ -150,24 +150,22 @@ if PluginConfig.patch_types:
             super().__init__(*args, **kwargs)
             self._type = type
 
-        def load_dialect_impl(self, dialect):
-            if id(dialect) not in dialect_patched:
-                dialect._json_serializer = self.type_adapter.dump_json  # type: ignore
-                dialect_patched.add(id(dialect))
-            return super().load_dialect_impl(dialect)
+        def bind_processor(self, dialect):
+            json = JSON()
 
-        def process_bind_param(self, value, dialect):
-            if isinstance(value, BaseModel):
-                return dict(value._iter(to_dict=True))
+            def test(a):
+                return self.type_adapter.dump_json(a)
 
-            return value
+            return json._make_bind_processor(
+                json._str_impl.bind_processor(dialect), test
+            )
+
+        def process_result_value(self, value, dialect):
+            return self.type_adapter.validate_python(value)
 
         @memoized_property
         def type_adapter(self):
             return TypeAdapter(self._type)
-
-        def process_result_value(self, value, dialect):
-            return self.type_adapter.validate_python(value)
 
         def copy(self, *a, **kw):
             return type(self)(self._type, *a, **kw)
