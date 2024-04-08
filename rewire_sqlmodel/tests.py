@@ -4,7 +4,12 @@ from inspect import isfunction
 from tempfile import TemporaryDirectory
 from typing import Awaitable, Callable, Sequence, Type, Union
 from rewire.config import ConfigModule
-from rewire.dependencies import Dependencies, DependenciesModule, InjectedDependency
+from rewire.dependencies import (
+    Dependencies,
+    DependenciesModule,
+    InjectedDependency,
+    Dependable,
+)
 from rewire.lifecycle import LifecycleModule
 from rewire.space import Module, Space
 from rewire_sqlmodel import SQLModel, transaction, plugin
@@ -48,6 +53,7 @@ class TemporalDBModule(Module, register=False):
 def prefill_db(
     *data: Union[Callable[[], None], SQLModel],
     modules: list[Type[Module]] = [DependenciesModule, ConfigModule, LifecycleModule],
+    dependencies: list[Dependencies | Dependable] = [],
 ):
     def wrapper[**P, T](cb: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
         @wraps(cb)
@@ -57,6 +63,7 @@ def prefill_db(
                 await (
                     DependenciesModule.get()
                     .add(plugin)
+                    .add(*dependencies)
                     .rebuild(inplace=True)
                     .add(TemporalDBModule.get().dependencies())
                     .solve()

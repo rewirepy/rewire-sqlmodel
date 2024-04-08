@@ -16,7 +16,7 @@ classifiers = [
 ]
 keywords = []
 dependencies = [
-    "sqlmodel >= 0.0.14",
+    "sqlmodel >= 0.0.15",
     "rewire"
 ]
 requires-python = ">=3.12"
