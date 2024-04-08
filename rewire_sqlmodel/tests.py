@@ -61,10 +61,8 @@ def prefill_db(
                     .add(TemporalDBModule.get().dependencies())
                     .solve()
                 )
-                try:
+                async with LifecycleModule.get().use_running():
                     return await cb(*args, **kwargs)
-                finally:
-                    await LifecycleModule.get().stop()
 
         return wrapped
 
