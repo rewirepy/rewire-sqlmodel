@@ -223,14 +223,19 @@ session_context = Context[AsyncSession]()
 
 
 class ContextSession:
+    ctx = CTX()
     session: AsyncSession | None = None
     commit_hooks: list[Callable[[], Awaitable]]
     rollback_hooks: list[Callable[[], Awaitable]]
 
     async def __aenter__(self):
+        if (root := self.ctx.get(None)) is not None:
+            return root
         if self.session is not None:
             self.context = session_context.use(self.session)
             self.context.__enter__()
+            self.self_context = self.ctx.use()
+            self.self_context.__enter__()
             return self
         lazy = LazySession.ctx.get(None)
         if lazy is not None:
@@ -241,6 +246,8 @@ class ContextSession:
         assert self.session is not None
         self.context = session_context.use(self.session)
         self.context.__enter__()
+        self.self_context = self.ctx.use()
+        self.self_context.__enter__()
         return self
 
     async def start(self):
@@ -251,10 +258,10 @@ class ContextSession:
     async def __aexit__(self, exc_type, exc_value, trace):
         if not self.context:
             return
+        self.self_context.__exit__(exc_type, exc_value, trace)
         self.context.__exit__(exc_type, exc_value, trace)
         if self.session is None:
             return
-
         if not exc_type:
             try:
                 await self.session.commit()
