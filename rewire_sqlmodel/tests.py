@@ -24,11 +24,9 @@ class TemporalDBModule(Module, register=False):
         with TemporaryDirectory() as dir:
             ConfigModule.get().patch(
                 {
-                    "plugins": {
-                        "sql": {
-                            "alembic": {"generate": False},
-                            "url": f"sqlite+aiosqlite:///{dir}/db.sqlite",
-                        }
+                    "rewire_sqlmodel": {
+                        "alembic": {"generate": False},
+                        "url": f"sqlite+aiosqlite:///{dir}/db.sqlite",
                     }
                 }
             )
