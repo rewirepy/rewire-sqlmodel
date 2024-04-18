@@ -225,10 +225,13 @@ session_context = Context[AsyncSession]()
 class ContextSession:
     ctx = CTX()
     session: AsyncSession | None = None
+    lock: anyio.Lock | None = None
     commit_hooks: list[Callable[[], Awaitable]]
     rollback_hooks: list[Callable[[], Awaitable]]
 
     async def __aenter__(self):
+        if PluginConfig.parallel is not False:
+            self.lock = await tx_lock.__aenter__()
         if (root := self.ctx.get(None)) is not None:
             self.context = None
             return root
@@ -257,6 +260,9 @@ class ContextSession:
         self.rollback_hooks = []
 
     async def __aexit__(self, exc_type, exc_value, trace):
+        if self.lock is not None:
+            await self.lock.__aexit__(exc_type, exc_value, trace)
+
         if not self.context:
             return
         self.self_context.__exit__(exc_type, exc_value, trace)
@@ -370,7 +376,8 @@ def context_transaction(standalone: bool = False):
 
             if session_provider and not standalone:
                 session = await session_provider.start()
-                with use_context_value(session_context, session):
+                assert session.session is not None
+                with use_context_value(session_context, session.session):
                     yield await cb(*args, **kwargs)
                 return
 
@@ -381,29 +388,7 @@ def context_transaction(standalone: bool = False):
             async with ContextSession():
                 yield await cb(*args, **kwargs)
 
-        if PluginConfig.parallel is not False:
-            return run
-
-        @asynccontextmanager
-        async def run_locked(*args: P.args, **kwargs: P.kwargs):
-            if session_context.get(None) is not None and not standalone:
-                logger.trace(
-                    "running nested transaction {}(*{}, **{})", cb, args, kwargs
-                )
-                yield await cb(*args, **kwargs)
-                return
-
-            logger.trace("waiting transaction {}(*{}, **{})", cb, args, kwargs)
-            async with tx_lock:
-                logger.trace("running transaction {}(*{}, **{})", cb, args, kwargs)
-                try:
-                    async with run(*args, **kwargs) as result:
-                        yield result
-                        return
-                finally:
-                    logger.trace("transaction ended {}(*{}, **{})", cb, args, kwargs)
-
-        return run_locked
+        return run
 
     return wrapper
 
