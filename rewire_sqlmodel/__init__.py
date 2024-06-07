@@ -230,7 +230,7 @@ class ContextSession:
     rollback_hooks: list[Callable[[], Awaitable]]
 
     async def __aenter__(self):
-        if PluginConfig.parallel is not False:
+        if PluginConfig.parallel is False:
             self.lock = await tx_lock.__aenter__()
         if (root := self.ctx.get(None)) is not None:
             self.context = None
