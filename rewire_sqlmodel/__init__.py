@@ -231,7 +231,8 @@ class ContextSession:
 
     async def __aenter__(self):
         if PluginConfig.parallel is False:
-            self.lock = await tx_lock.__aenter__()
+            await tx_lock.__aenter__()
+            self.lock = tx_lock
         if (root := self.ctx.get(None)) is not None:
             self.context = None
             return root
