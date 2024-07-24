@@ -154,7 +154,7 @@ if PluginConfig.patch_types:
             json = JSON()
 
             def test(a):
-                return self.type_adapter.dump_json(a)
+                return self.type_adapter.dump_json(a).decode()
 
             return json._make_bind_processor(
                 json._str_impl.bind_processor(dialect), test
