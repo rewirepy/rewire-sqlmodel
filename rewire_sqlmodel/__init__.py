@@ -396,7 +396,7 @@ def context_transaction(standalone: bool = False):
 
 def transaction(tries: int = 3, standalone: bool = False):  # /NOSONAR
     tx = context_transaction(standalone)
-    delays = [0] + [max(i**1.5, 60) for i in range(tries)]
+    delays = [0] + [min(i**1.5, 60) for i in range(tries)]
 
     def wrapper[**P, T](
         cb: Callable[P, Awaitable[T]],
