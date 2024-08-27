@@ -2,9 +2,12 @@
 requires      = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.package-data]
+"rewire-sqlmodel" = ["py.typed"]
+
 [project]
 name = "rewire-sqlmodel"
-version = "0.3.4"
+version = "0.3.5"
 description = "Integration of rewire and sqlmodel"
 readme = "README.md"
 authors = [{ name = "Ivan Vozhakov", email = "gou177@bk.ru" }]
