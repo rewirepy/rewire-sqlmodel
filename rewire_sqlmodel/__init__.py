@@ -195,21 +195,22 @@ if PluginConfig.patch_types:
         if field.annotation is None:
             return _get_sqlalchemy_type(field)
         root_type = field.annotation
+
         try:
             if get_origin(root_type) == ModelMapped:
                 root_type = get_args(root_type)[0]
-
             if (
                 get_origin(root_type) == UnionType
                 or get_origin(root_type) == typing.Union
             ):
                 args = [
                     arg
-                    for arg in get_args(field.annotation)
+                    for arg in get_args(root_type)
                     if not (isinstance(arg, NoneType) or arg == NoneType or arg is None)
                 ]
                 if len(args) == 1:
                     root_type = args[0]
+                    field.nullable = True  # type: ignore
             if get_origin(root_type) == Annotated:
                 root_type = get_args(root_type)[0]
 
@@ -222,12 +223,8 @@ if PluginConfig.patch_types:
             if issubclass(root_type, BigInt):
                 return BigInteger
         except TypeError:
-            if get_origin(field.annotation) == Literal:
-                type_ = field.annotation
-                field.annotation = type(get_args(field.annotation)[0])
-                t = get_sqlalchemy_type(field)
-                field.annotation = type_
-                return t
+            if get_origin(root_type) == Literal:
+                root_type = type(get_args(root_type)[0])
 
         original_annotation = field.annotation
         try:
