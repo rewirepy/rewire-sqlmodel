@@ -40,6 +40,7 @@ from rewire.plugins import Plugin, simple_plugin
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlalchemy.engine.result import ScalarResult
+from sqlalchemy.orm import Mapped
 
 plugin = simple_plugin()
 _Debug = Literal["debug"]
@@ -133,6 +134,13 @@ class SQLModel(BaseSQLModel):
         return SelectOfScalarExtended(cls)
 
 
+class ModelMapped[T](Mapped[T]):
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        item_tp = get_args(source_type)[0]
+        return handler.generate_schema(item_tp)
+
+
 BigInt = int
 
 if PluginConfig.patch_types:
@@ -188,6 +196,9 @@ if PluginConfig.patch_types:
             return _get_sqlalchemy_type(field)
         root_type = field.annotation
         try:
+            if get_origin(root_type) == ModelMapped:
+                root_type = get_args(root_type)[0]
+
             if (
                 get_origin(root_type) == UnionType
                 or get_origin(root_type) == typing.Union
