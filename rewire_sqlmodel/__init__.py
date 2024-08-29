@@ -3,6 +3,7 @@ from functools import wraps
 from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Awaitable,
     Callable,
@@ -12,6 +13,7 @@ from typing import (
     get_args,
     get_origin,
 )
+import typing
 from uuid import UUID
 import anyio
 from loguru import logger
@@ -32,7 +34,7 @@ from typing_extensions import Unpack
 
 from rewire.config import ConfigDependency, config
 from rewire.context import CTX, Context, use_context_value
-from rewire.dependencies import Dependencies, DependenciesModule, TypeRef
+from rewire.dependencies import Dependencies, TypeRef
 from rewire.lifecycle import LifecycleModule
 from rewire.plugins import Plugin, simple_plugin
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -181,11 +183,15 @@ if PluginConfig.patch_types:
         )
         if extra.get("json_in_sql") == "true":
             return PydanticJSON(field.annotation)
+
         if field.annotation is None:
             return _get_sqlalchemy_type(field)
+        root_type = field.annotation
         try:
-            root_type = field.annotation
-            if get_origin(root_type) == UnionType:
+            if (
+                get_origin(root_type) == UnionType
+                or get_origin(root_type) == typing.Union
+            ):
                 args = [
                     arg
                     for arg in get_args(field.annotation)
@@ -193,6 +199,8 @@ if PluginConfig.patch_types:
                 ]
                 if len(args) == 1:
                     root_type = args[0]
+            if get_origin(root_type) == Annotated:
+                root_type = get_args(root_type)[0]
 
             if (
                 get_origin(root_type) == UnionType or issubclass(root_type, BaseModel)
@@ -210,8 +218,16 @@ if PluginConfig.patch_types:
                 field.annotation = type_
                 return t
 
-        return _get_sqlalchemy_type(field)
+        original_annotation = field.annotation
+        try:
+            field.annotation = root_type
+            return _get_sqlalchemy_type(field)
+        finally:
+            field.annotation = original_annotation
 
+    import sqlmodel.main as sqlmodel_main
+
+    sqlmodel_main.get_sqlalchemy_type = get_sqlalchemy_type
     import sqlmodel.main as sqlmodel_main
 
     sqlmodel_main.get_sqlalchemy_type = get_sqlalchemy_type
