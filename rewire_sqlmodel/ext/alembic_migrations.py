@@ -490,10 +490,7 @@ def get_constraint_migration(
                         start="local_cols=",
                     )
                     out += Formatter.repr(
-                        [
-                            f"{x.column.table.name}.{x.column.name}"
-                            for x in constraint.elements
-                        ],
+                        [x.column.name for x in constraint.elements],
                         end=",",
                         start="remote_cols=",
                     )
