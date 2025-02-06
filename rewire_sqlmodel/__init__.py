@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import _ResetStyleArgType
-from sqlmodel import SQLModel as BaseSQLModel, col
+from sqlmodel import Field, SQLModel as BaseSQLModel, col
 from sqlmodel import select
 from typing_extensions import Unpack
 
@@ -127,6 +127,10 @@ class SQLModel(BaseSQLModel):
 
     def add(self):
         session_context.get().add(self)
+        return self
+
+    async def delete(self):
+        await session_context.get().delete(self)
         return self
 
     @classmethod
